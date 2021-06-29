@@ -1,28 +1,49 @@
 package main
 
 import (
-	"fmt"
+	"html/template"
 	"net/http"
 
 	"github.com/gorilla/mux"
 )
 
-func handlerFunc(w http.ResponseWriter, r *http.Request) {
+var homeTemplate *template.Template
+var contactTemplate *template.Template
+
+func home(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html")
-	if r.URL.Path == "/" {
-		fmt.Fprint(w, "<h1>Welcome to my awesome site</h1>")
-	} else if r.URL.Path == "/contact" {
-		fmt.Fprint(w, "To get in touch, please send an email to <a",
-			"href=\"mailto@support.lenslocked.com\">support@lenslocked.com</a>.")
-	} else {
-		w.WriteHeader(http.StatusNotFound)
-		fmt.Fprint(w, "<h1>We could not find the page you were looking for</h1>")
+	if err := homeTemplate.Execute(w, nil); err != nil {
+		panic(err)
+	}
+}
+
+func contact(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/html")
+	if err := contactTemplate.Execute(w, nil); err != nil {
+		panic(err)
 	}
 }
 
 func main() {
+	// homeView = NewView("views/home.gohtml")
+
+	var err error
+	homeTemplate, err = template.ParseFiles(
+		"views/home.gohtml",
+		"views/layouts/footer.gohtml",
+	)
+	if err != nil {
+		panic(err)
+	}
+	contactTemplate, err = template.ParseFiles(
+		"views/contact.gohtml",
+		"views/layouts/footer.gohtml",
+	)
+	if err != nil {
+		panic(err)
+	}
 	router := mux.NewRouter()
-	router.HandleFunc("/", handlerFunc)
-	router.HandleFunc("/contact", handlerFunc)
+	router.HandleFunc("/", home)
+	router.HandleFunc("/contact", contact)
 	http.ListenAndServe(":3000", router)
 }

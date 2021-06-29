@@ -1,0 +1,4 @@
+# github.com/shipsaw/scenario
+.\main.go:13:62: newline in string
+.\main.go:13:62: syntax error: unexpected newline, expecting comma or )
+.\main.go:14:8: invalid character U+005C '\'

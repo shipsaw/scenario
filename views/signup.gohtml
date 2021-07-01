@@ -1,5 +1,18 @@
 {{define "yield"}}
+  <div class="row">
+    <div class="col-lg-4 themed-grid-col"></div>
+    <div class="col-lg-4 themed-grid-col">
+        <div class="card">
+            <div class="card-body">
+                {{template "signupForm"}}
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4 themed-grid-col"></div>
+  </div>
+{{end}}
 
+{{define "signupForm"}}
 <!doctype html>
 <html lang="en">
   <head>

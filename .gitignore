@@ -59,6 +59,9 @@ builds/**/images/*
 **/tmp/*
 **/exp/*
 
+# VS Code
+workspace*
+
 # Don't include our binary
 lenslocked.com
 images/**

@@ -29,9 +29,10 @@ func main() {
 	usersC := controllers.NewUsers()
 
 	router := mux.NewRouter()
-	router.HandleFunc("/", home)
-	router.HandleFunc("/contact", contact)
-	router.HandleFunc("/signup", usersC.New)
+	router.HandleFunc("/", home).Methods("GET")
+	router.HandleFunc("/contact", contact).Methods("GET")
+	router.HandleFunc("/signup", usersC.New).Methods("GET")
+	router.HandleFunc("/signup", usersC.Create).Methods("POST")
 	http.ListenAndServe(":3000", router)
 }
 

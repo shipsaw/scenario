@@ -1,14 +1,15 @@
 package controllers
 
 import (
-	"fmt"
 	"net/http"
 
+	"github.com/shipsaw/scenario/models"
 	"github.com/shipsaw/scenario/views"
 )
 
 type Users struct {
 	NewView *views.View
+	us      *models.UserService
 }
 
 type SignupForm struct {
@@ -18,9 +19,10 @@ type SignupForm struct {
 
 // Used to create a new Users controller.  Should
 // only be used during initial setup
-func NewUsers() *Users {
+func NewUsers(us *models.UserService) *Users {
 	return &Users{
 		NewView: views.NewView("bootstrap", "views/users/new.gohtml"),
+		us:      us,
 	}
 }
 
@@ -40,5 +42,8 @@ func (u *Users) Create(w http.ResponseWriter, r *http.Request) {
 	if err := parseForm(r, &form); err != nil {
 		panic(err)
 	}
-	fmt.Fprintln(w, form)
+	if err := u.us.Create(&models.User{Email: form.Email}); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 }

@@ -49,6 +49,10 @@ func (us *UserService) ByID(id uint) (*User, error) {
 	}
 }
 
+func (us *UserService) Create(user *User) error {
+	return us.db.Create(user).Error
+}
+
 // Drops and rebuilds user table
 func (us *UserService) DestructiveReset() {
 	us.db.DropTableIfExists(&User{})

@@ -8,7 +8,8 @@ import (
 )
 
 var (
-	ErrNotFound = errors.New("models: resource not found")
+	ErrNotFound  = errors.New("models: resource not found")
+	ErrInvalidID = errors.New("models: id provided is invalid")
 )
 
 // Contains the specific type of DB that we are working with
@@ -38,19 +39,42 @@ func (us *UserService) Close() error {
 
 func (us *UserService) ByID(id uint) (*User, error) {
 	var user User
-	err := us.db.First(&user, "id=?", id).Error
-	switch err {
-	case nil:
-		return &user, nil
-	case gorm.ErrRecordNotFound:
-		return nil, ErrNotFound
-	default:
-		return nil, err
+	db := us.db.Where("id=?", id)
+	err := first(db, &user)
+	return &user, err
+}
+
+func (us *UserService) ByEmail(email string) (*User, error) {
+	var user User
+	db := us.db.Where("email=?", email)
+	err := first(db, &user)
+	return &user, err
+}
+
+// Wrapper for gorm's First method to check for our custom errors
+func first(db *gorm.DB, dst interface{}) error {
+	err := db.First(dst).Error
+	if err == gorm.ErrRecordNotFound {
+		return ErrNotFound
+	} else {
+		return err
 	}
 }
 
 func (us *UserService) Create(user *User) error {
 	return us.db.Create(user).Error
+}
+
+func (us *UserService) Update(user *User) error {
+	return us.db.Save(user).Error
+}
+
+func (us *UserService) Delete(id uint) error {
+	if id == 0 {
+		return ErrInvalidID
+	}
+	user := User{Model: gorm.Model{ID: id}}
+	return us.db.Delete(&user).Error
 }
 
 // Drops and rebuilds user table

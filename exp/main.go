@@ -5,6 +5,7 @@ import (
 
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/postgres"
+	"github.com/shipsaw/scenario/models"
 )
 
 const (
@@ -23,13 +24,15 @@ type User struct {
 func main() {
 	psqlInfo := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable",
 		host, port, user, password, dbname)
-
-	db, err := gorm.Open("postgres", psqlInfo)
+	us, err := models.NewUserService(psqlInfo)
 	if err != nil {
 		panic(err)
 	}
-	defer db.Close()
-	db.DropTableIfExists(&User{})
-	db.LogMode(true)
-	// db.AutoMigrate(&User{})
+	defer us.Close()
+	// us.DestructiveReset()
+	user, err := us.ByID(2)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(user)
 }

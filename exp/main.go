@@ -29,9 +29,11 @@ func main() {
 		panic(err)
 	}
 	defer us.Close()
-	us.DestructiveReset()
+	// us.DestructiveReset()
+	us.AutoMigrate()
 	user := models.User{
-		Email: "michael@yahoo.com",
+		Email:    "michael@yahoo.com",
+		Password: "password",
 	}
 	if err := us.Create(&user); err != nil {
 		panic(err)
@@ -41,9 +43,9 @@ func main() {
 		panic(err)
 	}
 
-	userByID, err := us.ByID(user.ID)
-	if err != nil {
-		panic(err)
-	}
-	fmt.Println(userByID)
+	// userByID, err := us.ByID(user.ID)
+	// if err != nil {
+	// 	panic(err)
+	// }
+	fmt.Println(user)
 }

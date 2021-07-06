@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/shipsaw/scenario/models"
@@ -42,8 +43,13 @@ func (u *Users) Create(w http.ResponseWriter, r *http.Request) {
 	if err := parseForm(r, &form); err != nil {
 		panic(err)
 	}
-	if err := u.us.Create(&models.User{Email: form.Email}); err != nil {
+	user := models.User{
+		Email:    form.Email,
+		Password: form.Password,
+	}
+	if err := u.us.Create(&user); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	fmt.Fprintln(w, user)
 }

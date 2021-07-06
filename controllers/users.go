@@ -9,11 +9,17 @@ import (
 )
 
 type Users struct {
-	NewView *views.View
-	us      *models.UserService
+	NewView   *views.View
+	LoginView *views.View
+	us        *models.UserService
 }
 
 type SignupForm struct {
+	Email    string `schema:"email"`
+	Password string `schema:"password"`
+}
+
+type LoginForm struct {
 	Email    string `schema:"email"`
 	Password string `schema:"password"`
 }
@@ -22,24 +28,25 @@ type SignupForm struct {
 // only be used during initial setup
 func NewUsers(us *models.UserService) *Users {
 	return &Users{
-		NewView: views.NewView("bootstrap", "views/users/new.gohtml"),
-		us:      us,
+		NewView:   views.NewView("bootstrap", "views/users/new.gohtml"),
+		LoginView: views.NewView("bootstrap", "views/users/login.gohtml"),
+		us:        us,
 	}
 }
 
 // Used to render the form where user can create new user account
 // GET /signup
-func (u *Users) New(w http.ResponseWriter, r *http.Request) {
-	if err := u.NewView.Render(w, nil); err != nil {
-		panic(err)
-	}
-}
+// func (u *Users) New(w http.ResponseWriter, r *http.Request) {
+// 	if err := u.NewView.Render(w, nil); err != nil {
+// 		panic(err)
+// 	}
+// }
 
 // Used to process the signup form when a user
 // submits it.  Creates a new user account
 // POST /signup
 func (u *Users) Create(w http.ResponseWriter, r *http.Request) {
-	var form SignupForm
+	var form EmailPwForm
 	if err := parseForm(r, &form); err != nil {
 		panic(err)
 	}
@@ -52,4 +59,14 @@ func (u *Users) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	fmt.Fprintln(w, user)
+}
+
+// Verifies provided email and password, then logs user in
+// Post /login
+func (u *Users) Login(w http.ResponseWriter, r *http.Request) {
+	var form EmailPwForm
+	if err := parseForm(r, &form); err != nil {
+		panic(err)
+	}
+	fmt.Fprintln(w, form)
 }

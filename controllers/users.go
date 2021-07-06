@@ -46,7 +46,7 @@ func NewUsers(us *models.UserService) *Users {
 // submits it.  Creates a new user account
 // POST /signup
 func (u *Users) Create(w http.ResponseWriter, r *http.Request) {
-	var form EmailPwForm
+	var form SignupForm
 	if err := parseForm(r, &form); err != nil {
 		panic(err)
 	}
@@ -64,9 +64,19 @@ func (u *Users) Create(w http.ResponseWriter, r *http.Request) {
 // Verifies provided email and password, then logs user in
 // Post /login
 func (u *Users) Login(w http.ResponseWriter, r *http.Request) {
-	var form EmailPwForm
+	var form LoginForm
 	if err := parseForm(r, &form); err != nil {
 		panic(err)
 	}
-	fmt.Fprintln(w, form)
+	user, err := u.us.Authenticate(form.Email, form.Password)
+	switch err {
+	case models.ErrNotFound:
+		fmt.Fprintln(w, "Invalid Email Address")
+	case models.ErrInvalidPassword:
+		fmt.Fprintln(w, "Invalid password provided")
+	case nil:
+		fmt.Fprintln(w, user)
+	default:
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
 }

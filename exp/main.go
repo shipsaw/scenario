@@ -2,14 +2,11 @@ package main
 
 import (
 	"fmt"
-	"net/http"
+
+	"github.com/shipsaw/scenario/rand"
 )
 
-func handlerFunc(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintln(w, "Hello from the internet")
-}
-
 func main() {
-	http.HandleFunc("/", handlerFunc)
-	http.ListenAndServe("localhost:3000", nil)
+	fmt.Println(rand.String(10))
+	fmt.Println(rand.RememberToken())
 }

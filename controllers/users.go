@@ -12,7 +12,7 @@ import (
 type Users struct {
 	NewView   *views.View
 	LoginView *views.View
-	us        *models.UserService
+	us        models.UserService
 }
 
 type SignupForm struct {
@@ -27,7 +27,7 @@ type LoginForm struct {
 
 // Used to create a new Users controller.  Should
 // only be used during initial setup
-func NewUsers(us *models.UserService) *Users {
+func NewUsers(us models.UserService) *Users {
 	return &Users{
 		NewView:   views.NewView("bootstrap", "views/users/new.gohtml"),
 		LoginView: views.NewView("bootstrap", "views/users/login.gohtml"),

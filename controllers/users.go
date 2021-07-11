@@ -37,11 +37,27 @@ func NewUsers(us models.UserService) *Users {
 
 // Used to render the form where user can create new user account
 // GET /signup
-// func (u *Users) New(w http.ResponseWriter, r *http.Request) {
-// 	if err := u.NewView.Render(w, nil); err != nil {
-// 		panic(err)
-// 	}
-// }
+func (u *Users) New(w http.ResponseWriter, r *http.Request) {
+	type Alert struct {
+		Level   string
+		Message string
+	}
+	type Data struct {
+		Alert Alert
+		Yield interface{}
+	}
+	a := Alert{
+		Level:   "success",
+		Message: "successfully rendered this alert",
+	}
+	d := Data{
+		Alert: a,
+		Yield: "Hello",
+	}
+	if err := u.NewView.Render(w, d); err != nil {
+		panic(err)
+	}
+}
 
 // Used to process the signup form when a user
 // submits it.  Creates a new user account

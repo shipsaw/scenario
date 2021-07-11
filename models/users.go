@@ -2,6 +2,9 @@ package models
 
 import (
 	"errors"
+	"fmt"
+	"net/mail"
+	"strings"
 
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/postgres"
@@ -11,9 +14,16 @@ import (
 )
 
 var (
-	ErrNotFound        = errors.New("models: resource not found")
-	ErrInvalidID       = errors.New("models: id provided is invalid")
-	ErrInvalidPassword = errors.New("models: invalid password provided")
+	ErrNotFound          = errors.New("models: resource not found")
+	ErrIDInvalid         = errors.New("models: id provided is invalid")
+	ErrPasswordIncorrect = errors.New("models: incorrect password provided")
+	ErrEmailInvalid      = errors.New("models: email address is not valid")
+	ErrEmailRequired     = errors.New("models: email address is required")
+	ErrEmailTaken        = errors.New("models: email address is already taken")
+	ErrPasswordTooShort  = errors.New("models: password must be at least 8 characters long")
+	ErrPasswordRequired  = errors.New("models: password required")
+	ErrRememberTooShort  = errors.New("models: remember token must be at least 32 bytes")
+	ErrRememberRequired  = errors.New("models: remember token is required")
 )
 
 const userPasswordPepper string = "TNhYZuUBK0"
@@ -27,6 +37,8 @@ type User struct {
 	Remember     string `gorm:"-"`
 	RememberHash string `gorm:"not null; unique_index"`
 }
+
+type userValFunc func(*User) error
 
 ////////////////////////////////////// Public Interfaces //////////////////////////////////////
 
@@ -59,8 +71,7 @@ type UserDB interface {
 
 ////////////////// Implementation of interfaces ////////////////////////////////
 type userGorm struct {
-	db   *gorm.DB
-	hmac hash.HMAC
+	db *gorm.DB
 }
 
 // Interface fulfullment check
@@ -72,6 +83,7 @@ type userService struct {
 
 type userValidator struct {
 	UserDB
+	hmac hash.HMAC
 }
 
 ///////////////////////////////////// userService ///////////////////////////////////////////
@@ -84,6 +96,7 @@ func NewUserService(connectionInfo string) (UserService, error) {
 	return &userService{
 		UserDB: &userValidator{
 			UserDB: ug,
+			hmac:   hash.NewHMAC(hmacSecretKey),
 		},
 	}, nil
 }
@@ -97,7 +110,7 @@ func (us *userService) Authenticate(email, password string) (*User, error) {
 	if err != nil {
 		switch err {
 		case bcrypt.ErrMismatchedHashAndPassword:
-			return nil, ErrInvalidPassword
+			return nil, ErrPasswordIncorrect
 		default:
 			return nil, err
 		}
@@ -105,7 +118,222 @@ func (us *userService) Authenticate(email, password string) (*User, error) {
 	return foundUser, nil
 }
 
+/////////////////////////////////// userValidator functions //////////////////////////////////
+
+/*
+func newUserValidator(udb UserDB, hmac hash.HMAC) *userValidator {
+	return &userValidator{
+		UserDB: udb,
+		hmac:   hmac,
+	}
+}
+*/
+
+func runUserValFuncs(user *User, fns ...userValFunc) error {
+	for _, fn := range fns {
+		if err := fn(user); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (uv *userValidator) bcryptPassword(user *User) error {
+	if user.Password == "" {
+		return nil
+	}
+	pwBytes := []byte(user.Password + userPasswordPepper)
+	hashedBytes, err := bcrypt.GenerateFromPassword(pwBytes, bcrypt.DefaultCost)
+	if err != nil {
+		return err
+	}
+	user.PasswordHash = string(hashedBytes)
+	user.Password = ""
+	return nil
+}
+
+func (uv *userValidator) passwordMinLength(user *User) error {
+	if user.Password == "" {
+		return nil
+	}
+	if len(user.Password) < 8 {
+		return ErrPasswordTooShort
+	}
+	return nil
+}
+
+func (uv *userValidator) passwordRequired(user *User) error {
+	if user.Password == "" {
+		return ErrPasswordRequired
+	}
+	return nil
+}
+
+func (uv *userValidator) passwordHashRequired(user *User) error {
+	if user.PasswordHash == "" {
+		return ErrPasswordRequired
+	}
+	return nil
+}
+
+func (uv *userValidator) hmacRemember(user *User) error {
+	if user.Remember == "" {
+		return nil
+	}
+	user.RememberHash = uv.hmac.Hash(user.Remember)
+	return nil
+}
+
+func (uv *userValidator) setInitalRemember(user *User) error {
+	if user.Remember != "" {
+		return nil
+	}
+	token, err := rand.RememberToken()
+	if err != nil {
+		return err
+	}
+	user.Remember = token
+	return nil
+}
+
+func (uv *userValidator) rememberMinBytes(user *User) error {
+	if user.Remember == "" {
+		return nil
+	}
+	n, err := rand.Nbytes(user.Remember)
+	if err != nil {
+		return err
+	}
+	if n < 32 {
+		return ErrRememberTooShort
+	}
+	return nil
+}
+
+func (uv *userValidator) rememberHashRequired(user *User) error {
+	if user.RememberHash == "" {
+		return ErrRememberRequired
+	}
+	return nil
+}
+
+func (uv *userValidator) isGreaterThanZero(user *User) error {
+	if user.ID <= 0 {
+		return ErrIDInvalid
+	}
+	return nil
+}
+
+func (uv *userValidator) normalizeEmail(user *User) error {
+	user.Email = strings.ToLower(user.Email)
+	user.Email = strings.TrimSpace(user.Email)
+	return nil
+}
+
+func (uv *userValidator) emailFormat(user *User) error {
+	if _, err := mail.ParseAddress(user.Email); err != nil {
+		return ErrEmailInvalid
+	}
+	return nil
+}
+
+func (uv *userValidator) emailIsAvail(user *User) error {
+	existing, err := uv.ByEmail(user.Email)
+	if err != nil {
+		if err == ErrNotFound {
+			return nil
+		}
+		return err
+	}
+
+	if user.ID != existing.ID {
+		return ErrEmailTaken
+	}
+	return nil
+}
+
+////////////////////////////////////////////// userValidator ////////////////////////////////////
+
+func (uv *userValidator) ByRemember(token string) (*User, error) {
+	user := User{
+		Remember: token,
+	}
+	if err := runUserValFuncs(&user, uv.hmacRemember); err != nil {
+		return nil, err
+	}
+	return uv.UserDB.ByRemember(user.RememberHash)
+}
+
+func (uv *userValidator) Create(user *User) error {
+	err := runUserValFuncs(user,
+		uv.passwordRequired,
+		uv.passwordMinLength,
+		uv.bcryptPassword,
+		uv.passwordHashRequired,
+		uv.setInitalRemember,
+		uv.rememberMinBytes,
+		uv.hmacRemember,
+		uv.rememberHashRequired,
+		uv.normalizeEmail,
+		uv.requireEmail,
+		uv.emailFormat,
+		uv.emailIsAvail)
+	if err != nil {
+		return err
+	}
+
+	return uv.UserDB.Create(user)
+}
+
+func (uv *userValidator) Update(user *User) error {
+	err := runUserValFuncs(user,
+		uv.passwordMinLength,
+		uv.bcryptPassword,
+		uv.passwordHashRequired,
+		uv.rememberMinBytes,
+		uv.hmacRemember,
+		uv.rememberHashRequired,
+		uv.normalizeEmail,
+		uv.requireEmail,
+		uv.emailFormat,
+		uv.emailIsAvail)
+	if err != nil {
+		return err
+	}
+
+	return uv.UserDB.Update(user)
+}
+
+func (uv *userValidator) Delete(id uint) error {
+	var user User
+	user.ID = id
+	err := runUserValFuncs(&user, uv.isGreaterThanZero)
+	if err != nil {
+		return err
+	}
+	return uv.UserDB.Delete(id)
+}
+
+func (uv *userValidator) ByEmail(email string) (*User, error) {
+	user := User{
+		Email: email,
+	}
+	if err := runUserValFuncs(&user, uv.normalizeEmail); err != nil {
+		return nil, err
+	}
+	return uv.UserDB.ByEmail(user.Email)
+}
+
+func (uv *userValidator) requireEmail(user *User) error {
+	fmt.Println("email: ", user.Email, "password: ", user.Password)
+	if user.Email == "" {
+		return ErrEmailRequired
+	}
+	return nil
+}
+
 /////////////////////////////////// userGorm //////////////////////////////////////
+
 func NewUserGorm(connectionInfo string) (*userGorm, error) {
 	db, err := gorm.Open("postgres", connectionInfo)
 	if err != nil {
@@ -113,8 +341,7 @@ func NewUserGorm(connectionInfo string) (*userGorm, error) {
 	}
 	db.LogMode(false)
 	return &userGorm{
-		db:   db,
-		hmac: hash.NewHMAC(hmacSecretKey),
+		db: db,
 	}, nil
 }
 
@@ -136,10 +363,9 @@ func (ug *userGorm) ByEmail(email string) (*User, error) {
 	return &user, err
 }
 
-func (ug *userGorm) ByRemember(token string) (*User, error) {
+func (ug *userGorm) ByRemember(rememberHash string) (*User, error) {
 	var user User
-	hashedToken := ug.hmac.Hash(token)
-	db := ug.db.Where("remember_hash=?", hashedToken)
+	db := ug.db.Where("remember_hash=?", rememberHash)
 	err := first(db, &user)
 	if err != nil {
 		return nil, err
@@ -148,36 +374,14 @@ func (ug *userGorm) ByRemember(token string) (*User, error) {
 }
 
 func (ug *userGorm) Create(user *User) error {
-	pwBytes := []byte(user.Password + userPasswordPepper)
-	hashedBytes, err := bcrypt.GenerateFromPassword(pwBytes, bcrypt.DefaultCost)
-	if err != nil {
-		return err
-	}
-	user.PasswordHash = string(hashedBytes)
-	user.Password = ""
-
-	if user.Remember == "" {
-		token, err := rand.RememberToken()
-		if err != nil {
-			return err
-		}
-		user.Remember = token
-	}
-	user.RememberHash = ug.hmac.Hash(user.Remember)
 	return ug.db.Create(user).Error
 }
 
 func (ug *userGorm) Update(user *User) error {
-	if user.Remember != "" {
-		user.RememberHash = ug.hmac.Hash(user.Remember)
-	}
 	return ug.db.Save(user).Error
 }
 
 func (ug *userGorm) Delete(id uint) error {
-	if id == 0 {
-		return ErrInvalidID
-	}
 	user := User{Model: gorm.Model{ID: id}}
 	return ug.db.Delete(&user).Error
 }

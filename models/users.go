@@ -153,6 +153,13 @@ func (uv *userValidator) setInitalRemember(user *User) error {
 	return nil
 }
 
+func (uv *userValidator) isGreaterThanZero(user *User) error {
+	if user.ID <= 0 {
+		return ErrInvalidID
+	}
+	return nil
+}
+
 ////////////////////////////////////////////// userValidator ////////////////////////////////////
 
 func (uv *userValidator) ByRemember(token string) (*User, error) {
@@ -166,14 +173,6 @@ func (uv *userValidator) ByRemember(token string) (*User, error) {
 }
 
 func (uv *userValidator) Create(user *User) error {
-	if user.Remember == "" {
-		token, err := rand.RememberToken()
-		if err != nil {
-			return err
-		}
-		user.Remember = token
-	}
-
 	if err := runUserValFuncs(user,
 		uv.bcryptPassword,
 		uv.setInitalRemember,
@@ -194,8 +193,11 @@ func (uv *userValidator) Update(user *User) error {
 }
 
 func (uv *userValidator) Delete(id uint) error {
-	if id == 0 {
-		return ErrInvalidID
+	var user User
+	user.ID = id
+	err := runUserValFuncs(&user, uv.isGreaterThanZero)
+	if err != nil {
+		return err
 	}
 	return uv.UserDB.Delete(id)
 }

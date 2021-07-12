@@ -1,7 +1,6 @@
 package models
 
 import (
-	"errors"
 	"fmt"
 	"net/mail"
 	"strings"
@@ -11,19 +10,6 @@ import (
 	"github.com/shipsaw/scenario/hash"
 	"github.com/shipsaw/scenario/rand"
 	"golang.org/x/crypto/bcrypt"
-)
-
-var (
-	ErrNotFound          = errors.New("models: resource not found")
-	ErrIDInvalid         = errors.New("models: id provided is invalid")
-	ErrPasswordIncorrect = errors.New("models: incorrect password provided")
-	ErrEmailInvalid      = errors.New("models: email address is not valid")
-	ErrEmailRequired     = errors.New("models: email address is required")
-	ErrEmailTaken        = errors.New("models: email address is already taken")
-	ErrPasswordTooShort  = errors.New("models: password must be at least 8 characters long")
-	ErrPasswordRequired  = errors.New("models: password required")
-	ErrRememberTooShort  = errors.New("models: remember token must be at least 32 bytes")
-	ErrRememberRequired  = errors.New("models: remember token is required")
 )
 
 const userPasswordPepper string = "TNhYZuUBK0"

@@ -39,9 +39,7 @@ func NewUsers(us models.UserService) *Users {
 // Used to render the form where user can create new user account
 // GET /signup
 func (u *Users) New(w http.ResponseWriter, r *http.Request) {
-	if err := u.NewView.Render(w, nil); err != nil {
-		panic(err)
-	}
+	u.NewView.Render(w, nil)
 }
 
 // Used to process the signup form when a user
@@ -52,10 +50,7 @@ func (u *Users) Create(w http.ResponseWriter, r *http.Request) {
 	var form SignupForm
 	if err := parseForm(r, &form); err != nil {
 		log.Println(err)
-		vd.Alert = &views.Alert{
-			Level:   views.AlertLvlError,
-			Message: views.AlertMsgGeneric,
-		}
+		vd.SetAlert(err)
 		u.NewView.Render(w, vd)
 		return
 	}
@@ -64,10 +59,7 @@ func (u *Users) Create(w http.ResponseWriter, r *http.Request) {
 		Password: form.Password,
 	}
 	if err := u.us.Create(&user); err != nil {
-		vd.Alert = &views.Alert{
-			Level:   views.AlertLvlError,
-			Message: err.Error(),
-		}
+		vd.SetAlert(err)
 		u.NewView.Render(w, vd)
 		return
 	}
@@ -81,26 +73,30 @@ func (u *Users) Create(w http.ResponseWriter, r *http.Request) {
 // Verifies provided email and password, then logs user in
 // Post /login
 func (u *Users) Login(w http.ResponseWriter, r *http.Request) {
+	vd := views.Data{}
 	var form LoginForm
 	if err := parseForm(r, &form); err != nil {
-		panic(err)
+		log.Println(err)
+		vd.SetAlert(err)
+		u.LoginView.Render(w, vd)
+		return
 	}
 	user, err := u.us.Authenticate(form.Email, form.Password)
 	if err != nil {
 
 		switch err {
 		case models.ErrNotFound:
-			fmt.Fprintln(w, "Invalid Email Address")
-		case models.ErrPasswordIncorrect:
-			fmt.Fprintln(w, "Invalid password provided")
+			vd.AlertError("Invalid email address")
 		default:
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			vd.SetAlert(err)
 		}
+		u.LoginView.Render(w, vd)
 		return
 	}
 
 	if err = u.signIn(w, user); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		vd.SetAlert(err)
+		u.LoginView.Render(w, vd)
 		return
 	}
 

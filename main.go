@@ -24,10 +24,13 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	// us.DestructiveReset()
+	defer services.Close()
+	// services.DestructiveReset()
+	services.AutoMigrate()
 
 	staticC := controllers.NewStatic()
 	usersC := controllers.NewUsers(services.User)
+	galleriesC := controllers.NewGalleries(services.Gallery)
 
 	router := mux.NewRouter()
 	router.Handle("/", staticC.HomeView).Methods("GET")
@@ -37,5 +40,9 @@ func main() {
 	router.Handle("/login", usersC.LoginView).Methods("GET")
 	router.HandleFunc("/login", usersC.Login).Methods("POST")
 	router.HandleFunc("/cookietest", usersC.CookieTest).Methods("GET")
+
+	// Gallery routes
+	router.Handle("/galleries/new", galleriesC.NewView).Methods("GET")
+	router.HandleFunc("/galleries", galleriesC.Create).Methods("POST")
 	http.ListenAndServe(":3000", router)
 }

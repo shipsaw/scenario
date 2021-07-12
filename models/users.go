@@ -46,13 +46,6 @@ type UserDB interface {
 	Create(user *User) error
 	Update(user *User) error
 	Delete(id uint) error
-
-	// Used to close db connection
-	Close() error
-
-	// Migration helpers
-	AutoMigrate() error
-	DestructiveReset() error
 }
 
 ////////////////// Implementation of interfaces ////////////////////////////////
@@ -317,10 +310,6 @@ func (uv *userValidator) requireEmail(user *User) error {
 
 /////////////////////////////////// userGorm //////////////////////////////////////
 
-func (ug *userGorm) Close() error {
-	return ug.db.Close()
-}
-
 func (ug *userGorm) ByID(id uint) (*User, error) {
 	var user User
 	db := ug.db.Where("id=?", id)
@@ -356,22 +345,6 @@ func (ug *userGorm) Update(user *User) error {
 func (ug *userGorm) Delete(id uint) error {
 	user := User{Model: gorm.Model{ID: id}}
 	return ug.db.Delete(&user).Error
-}
-
-// Drops and rebuilds user table
-func (ug *userGorm) DestructiveReset() error {
-	if err := ug.db.DropTableIfExists(&User{}).Error; err != nil {
-		return err
-	}
-	return ug.AutoMigrate()
-}
-
-// Wrapper around Gorm automigrate to allow us to be db-type agnostic
-func (ug *userGorm) AutoMigrate() error {
-	if err := ug.db.AutoMigrate(&User{}).Error; err != nil {
-		return err
-	}
-	return nil
 }
 
 // Wrapper for gorm's First method to check for our custom errors

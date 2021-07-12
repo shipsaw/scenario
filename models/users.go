@@ -74,17 +74,14 @@ type userValidator struct {
 
 ///////////////////////////////////// userService ///////////////////////////////////////////
 
-func NewUserService(connectionInfo string) (UserService, error) {
-	ug, err := NewUserGorm(connectionInfo)
-	if err != nil {
-		return nil, err
-	}
+func NewUserService(db *gorm.DB) UserService {
+	ug := &userGorm{db}
 	return &userService{
 		UserDB: &userValidator{
 			UserDB: ug,
 			hmac:   hash.NewHMAC(hmacSecretKey),
 		},
-	}, nil
+	}
 }
 
 func (us *userService) Authenticate(email, password string) (*User, error) {
@@ -319,17 +316,6 @@ func (uv *userValidator) requireEmail(user *User) error {
 }
 
 /////////////////////////////////// userGorm //////////////////////////////////////
-
-func NewUserGorm(connectionInfo string) (*userGorm, error) {
-	db, err := gorm.Open("postgres", connectionInfo)
-	if err != nil {
-		return nil, err
-	}
-	db.LogMode(false)
-	return &userGorm{
-		db: db,
-	}, nil
-}
 
 func (ug *userGorm) Close() error {
 	return ug.db.Close()

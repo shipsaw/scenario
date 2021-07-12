@@ -24,8 +24,6 @@ type User struct {
 	RememberHash string `gorm:"not null; unique_index"`
 }
 
-type userValFunc func(*User) error
-
 ////////////////////////////////////// Public Interfaces //////////////////////////////////////
 
 // models package API
@@ -96,14 +94,7 @@ func (us *userService) Authenticate(email, password string) (*User, error) {
 
 /////////////////////////////////// userValidator functions //////////////////////////////////
 
-/*
-func newUserValidator(udb UserDB, hmac hash.HMAC) *userValidator {
-	return &userValidator{
-		UserDB: udb,
-		hmac:   hmac,
-	}
-}
-*/
+type userValFunc func(*User) error
 
 func runUserValFuncs(user *User, fns ...userValFunc) error {
 	for _, fn := range fns {

@@ -36,6 +36,7 @@ type User struct {
 	PasswordHash string `gorm:"not null"`
 	Remember     string `gorm:"-"`
 	RememberHash string `gorm:"not null; unique_index"`
+	Assets       []Asset
 }
 
 type userValFunc func(*User) error
@@ -339,7 +340,7 @@ func NewUserGorm(connectionInfo string) (*userGorm, error) {
 	if err != nil {
 		return nil, err
 	}
-	db.LogMode(false)
+	db.LogMode(true)
 	return &userGorm{
 		db: db,
 	}, nil

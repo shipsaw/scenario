@@ -6,6 +6,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/shipsaw/scenario/controllers"
+	"github.com/shipsaw/scenario/middleware"
 	"github.com/shipsaw/scenario/models"
 )
 
@@ -42,7 +43,8 @@ func main() {
 	router.HandleFunc("/cookietest", usersC.CookieTest).Methods("GET")
 
 	// Gallery routes
-	router.Handle("/galleries/new", galleriesC.NewView).Methods("GET")
-	router.HandleFunc("/galleries", galleriesC.Create).Methods("POST")
+	requireUserMw := middleware.RequireUser{UserService: services.User}
+	router.Handle("/galleries/new", requireUserMw.Apply(galleriesC.NewView)).Methods("GET")
+	router.HandleFunc("/galleries", requireUserMw.ApplyFn(galleriesC.Create)).Methods("POST")
 	http.ListenAndServe(":3000", router)
 }

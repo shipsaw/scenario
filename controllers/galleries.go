@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/shipsaw/scenario/context"
 	"github.com/shipsaw/scenario/models"
 	"github.com/shipsaw/scenario/views"
 )
@@ -28,8 +29,16 @@ func (g *Galleries) Create(w http.ResponseWriter, r *http.Request) {
 		g.NewView.Render(w, vd)
 		return
 	}
+	user := context.User(r.Context())
+	if user == nil {
+		fmt.Println("BREAK 3")
+		http.Redirect(w, r, "/login", http.StatusFound)
+		return
+	}
+	fmt.Println("Create got the user: ", user)
 	gallery := models.Gallery{
-		Title: form.Title,
+		Title:  form.Title,
+		UserID: user.ID,
 	}
 	if err := g.gs.Create(&gallery); err != nil {
 		vd.SetAlert(err)

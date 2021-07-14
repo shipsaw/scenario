@@ -29,11 +29,11 @@ func main() {
 	// services.DestructiveReset()
 	services.AutoMigrate()
 
+	router := mux.NewRouter()
 	staticC := controllers.NewStatic()
 	usersC := controllers.NewUsers(services.User)
-	galleriesC := controllers.NewGalleries(services.Gallery)
+	galleriesC := controllers.NewGalleries(services.Gallery, router)
 
-	router := mux.NewRouter()
 	router.Handle("/", staticC.HomeView).Methods("GET")
 	router.Handle("/contact", staticC.ContactView).Methods("GET")
 	router.HandleFunc("/signup", usersC.New).Methods("GET")
@@ -46,5 +46,8 @@ func main() {
 	requireUserMw := middleware.RequireUser{UserService: services.User}
 	router.Handle("/galleries/new", requireUserMw.Apply(galleriesC.NewView)).Methods("GET")
 	router.HandleFunc("/galleries", requireUserMw.ApplyFn(galleriesC.Create)).Methods("POST")
+	router.HandleFunc("/galleries/:id", galleriesC.Show).Methods("GET")
+	router.HandleFunc("/galleries/{id:[0-9]+}", galleriesC.Show).Methods("GET").Name(controllers.ShowGallery)
+
 	http.ListenAndServe(":3000", router)
 }

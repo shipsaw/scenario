@@ -1,7 +1,6 @@
 package models
 
 import (
-	"fmt"
 	"net/mail"
 	"strings"
 
@@ -292,7 +291,6 @@ func (uv *userValidator) ByEmail(email string) (*User, error) {
 }
 
 func (uv *userValidator) requireEmail(user *User) error {
-	fmt.Println("email: ", user.Email, "password: ", user.Password)
 	if user.Email == "" {
 		return ErrEmailRequired
 	}

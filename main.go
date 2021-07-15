@@ -46,6 +46,7 @@ func main() {
 	requireUserMw := middleware.RequireUser{UserService: services.User}
 	router.Handle("/galleries/new", requireUserMw.Apply(galleriesC.NewView)).Methods("GET")
 	router.HandleFunc("/galleries", requireUserMw.ApplyFn(galleriesC.Create)).Methods("POST")
+	router.HandleFunc("/galleries/{id:[0-9]+}/edit", requireUserMw.ApplyFn(galleriesC.Edit)).Methods("GET")
 	router.HandleFunc("/galleries/:id", galleriesC.Show).Methods("GET")
 	router.HandleFunc("/galleries/{id:[0-9]+}", galleriesC.Show).Methods("GET").Name(controllers.ShowGallery)
 

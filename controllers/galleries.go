@@ -19,6 +19,7 @@ const (
 type Galleries struct {
 	NewView  *views.View
 	ShowView *views.View
+	EditView *views.View
 	gs       models.GalleryService
 	router   *mux.Router
 }
@@ -62,18 +63,45 @@ func NewGalleries(gs models.GalleryService, router *mux.Router) *Galleries {
 	return &Galleries{
 		NewView:  views.NewView("bootstrap", "views/galleries/new.gohtml"),
 		ShowView: views.NewView("bootstrap", "views/galleries/show.gohtml"),
+		EditView: views.NewView("bootstrap", "views/galleries/edit.gohtml"),
 		gs:       gs,
 		router:   router,
 	}
 }
 
-// GET /galleries/:id
+// GET /galleries/:id/edit
 func (g *Galleries) Show(w http.ResponseWriter, r *http.Request) {
+	gallery, err := g.GalleryByID(w, r)
+	if err != nil {
+		return
+	}
+	var vd views.Data
+	vd.Yield = gallery
+	g.ShowView.Render(w, vd)
+}
+
+func (g *Galleries) Edit(w http.ResponseWriter, r *http.Request) {
+	gallery, err := g.GalleryByID(w, r)
+	if err != nil {
+		return
+	}
+	user := context.User(r.Context())
+	if gallery.UserID != user.ID {
+		http.Error(w, "Gallery not found", http.StatusNotFound)
+		return
+	}
+	var vd views.Data
+	vd.Yield = gallery
+	g.EditView.Render(w, vd)
+}
+
+func (g *Galleries) GalleryByID(w http.ResponseWriter, r *http.Request) (*models.Gallery, error) {
 	vars := mux.Vars(r)
 	idStr := vars["id"]
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
 		http.Error(w, "Invalid gallery ID", http.StatusNotFound)
+		return nil, err
 	}
 	gallery, err := g.gs.ByID(uint(id))
 	if err != nil {
@@ -83,9 +111,7 @@ func (g *Galleries) Show(w http.ResponseWriter, r *http.Request) {
 		default:
 			http.Error(w, "Whoops, something went wrong.", http.StatusInternalServerError)
 		}
-		return
+		return nil, err
 	}
-	var vd views.Data
-	vd.Yield = gallery
-	g.ShowView.Render(w, vd)
+	return gallery, nil
 }

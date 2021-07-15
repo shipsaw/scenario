@@ -18,6 +18,7 @@ type GalleryDB interface {
 	Create(gallery *Gallery) error
 	ByID(id uint) (*Gallery, error)
 	Update(gallery *Gallery) error
+	Delete(id uint) error
 }
 
 ////////////////// Implementation of interfaces ////////////////////////////////
@@ -71,6 +72,15 @@ func (gv *galleryValidator) titleRequired(gallery *Gallery) error {
 	return nil
 }
 
+func (gv *galleryValidator) Delete(id uint) error {
+	var gallery Gallery
+	gallery.ID = id
+	if id <= 0 {
+		return ErrIDInvalid
+	}
+	return gv.GalleryDB.Delete(id)
+}
+
 ////////////////////////////////////////////// GalleryValidator ////////////////////////////////////
 
 func (gv *galleryValidator) Create(gallery *Gallery) error {
@@ -83,7 +93,17 @@ func (gv *galleryValidator) Create(gallery *Gallery) error {
 	return gv.GalleryDB.Create(gallery)
 }
 
-/////////////////////////////////// userGorm //////////////////////////////////////
+func (gv *galleryValidator) Update(gallery *Gallery) error {
+	err := runGalleryValFuncs(gallery,
+		gv.userIDRequired,
+		gv.titleRequired)
+	if err != nil {
+		return err
+	}
+	return gv.GalleryDB.Update(gallery)
+}
+
+/////////////////////////////////// galleryGorm //////////////////////////////////////
 
 func (gg *galleryGorm) Create(gallery *Gallery) error {
 	return gg.db.Create(gallery).Error
@@ -98,4 +118,9 @@ func (gg *galleryGorm) ByID(id uint) (*Gallery, error) {
 	db := gg.db.Where("id=?", id)
 	err := first(db, &gallery)
 	return &gallery, err
+}
+
+func (gg *galleryGorm) Delete(id uint) error {
+	gallery := Gallery{Model: gorm.Model{ID: id}}
+	return gg.db.Delete(&gallery).Error
 }

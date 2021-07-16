@@ -1,5 +1,7 @@
 package views
 
+import "github.com/shipsaw/scenario/models"
+
 const (
 	AlertLvlError   = "danger"
 	AlertLvlWarning = "warning"
@@ -16,6 +18,7 @@ type Alert struct {
 
 // Top level structure that views expect
 type Data struct {
+	User  *models.User
 	Alert *Alert
 	Yield interface{}
 }

@@ -43,14 +43,20 @@ func main() {
 	router.HandleFunc("/cookietest", usersC.CookieTest).Methods("GET")
 
 	// Gallery routes
-	requireUserMw := middleware.RequireUser{UserService: services.User}
+	userMw := middleware.User{
+		UserService: services.User,
+	}
+	requireUserMw := middleware.RequireUser{
+		User: userMw,
+	}
+	router.Handle("/galleries", requireUserMw.ApplyFn(galleriesC.Index)).Methods("GET")
 	router.Handle("/galleries/new", requireUserMw.Apply(galleriesC.NewView)).Methods("GET")
 	router.HandleFunc("/galleries", requireUserMw.ApplyFn(galleriesC.Create)).Methods("POST")
-	router.HandleFunc("/galleries/{id:[0-9]+}/edit", requireUserMw.ApplyFn(galleriesC.Edit)).Methods("GET")
+	router.HandleFunc("/galleries/{id:[0-9]+}/edit", requireUserMw.ApplyFn(galleriesC.Edit)).Methods("GET").Name(controllers.EditGallery)
 	router.HandleFunc("/galleries/{id:[0-9]+}/update", requireUserMw.ApplyFn(galleriesC.Update)).Methods("POST")
 	router.HandleFunc("/galleries/{id:[0-9]+}/delete", requireUserMw.ApplyFn(galleriesC.Delete)).Methods("POST")
 	router.HandleFunc("/galleries/:id", galleriesC.Show).Methods("GET")
 	router.HandleFunc("/galleries/{id:[0-9]+}", galleriesC.Show).Methods("GET").Name(controllers.ShowGallery)
 
-	http.ListenAndServe(":3000", router)
+	http.ListenAndServe(":3000", userMw.Apply(router))
 }

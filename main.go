@@ -56,6 +56,7 @@ func main() {
 	router.HandleFunc("/galleries/{id:[0-9]+}/delete", requireUserMw.ApplyFn(galleriesC.Delete)).Methods("POST")
 	router.HandleFunc("/galleries/:id", galleriesC.Show).Methods("GET")
 	router.HandleFunc("/galleries/{id:[0-9]+}", galleriesC.Show).Methods("GET").Name(controllers.ShowGallery)
+	router.HandleFunc("/galleries/{id:[0-9]+}/images", requireUserMw.ApplyFn(galleriesC.ImageUpload)).Methods("POST")
 
 	http.ListenAndServe(":3000", userMw.Apply(router))
 }

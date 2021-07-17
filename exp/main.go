@@ -1,12 +1,19 @@
 package main
 
 import (
-	"fmt"
-
-	"github.com/shipsaw/scenario/rand"
+	"bufio"
+	"context"
+	"os"
 )
 
 func main() {
-	fmt.Println(rand.String(10))
-	fmt.Println(rand.RememberToken())
+	ctx := context.Background()
+	ctx, cancel := context.WithCancel(ctx)
+
+	go func() {
+		s := bufio.NewScanner(os.Stdin)
+		s.Scan()
+		cancel()
+	}()
+
 }

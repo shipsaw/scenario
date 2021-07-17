@@ -2,8 +2,10 @@ package controllers
 
 import (
 	"fmt"
+	"io"
 	"log"
 	"net/http"
+	"os"
 	"strconv"
 
 	"github.com/gorilla/mux"
@@ -15,6 +17,8 @@ import (
 const (
 	ShowGallery = "show_gallery"
 	EditGallery = "edit_gallery"
+
+	maxMultipartMem = 1 << 20 // 1 mb
 )
 
 type Galleries struct {
@@ -142,6 +146,83 @@ func (g *Galleries) Update(w http.ResponseWriter, r *http.Request) {
 		Message: "Gallery successfully updated!",
 	}
 	g.EditView.Render(w, r, vd)
+}
+
+// POST /galleries/:id/images
+func (g *Galleries) ImageUpload(w http.ResponseWriter, r *http.Request) {
+	gallery, err := g.GalleryByID(w, r)
+	if err != nil {
+		return
+	}
+	user := context.User(r.Context())
+	if gallery.UserID != user.ID {
+		http.Error(w, "Gallery not found", http.StatusNotFound)
+		return
+	}
+
+	var vd views.Data
+	vd.Yield = gallery
+	galleryPath := fmt.Sprintf("images/galleries/%v/", gallery.ID)
+	err = os.MkdirAll(galleryPath, 0755)
+	if err != nil {
+		vd.SetAlert(err)
+		g.EditView.Render(w, r, vd)
+		return
+	}
+
+	err = r.ParseMultipartForm(maxMultipartMem)
+	if err != nil {
+		vd.SetAlert(err)
+		g.EditView.Render(w, r, vd)
+	}
+
+	files := r.MultipartForm.File["images"]
+	for _, f := range files {
+		file, err := f.Open()
+		if err != nil {
+			vd.SetAlert(err)
+			g.EditView.Render(w, r, vd)
+			return
+		}
+		defer file.Close()
+
+		dst, err := os.Create(galleryPath + f.Filename)
+		if err != nil {
+			vd.SetAlert(err)
+			g.EditView.Render(w, r, vd)
+			return
+		}
+		defer dst.Close()
+
+		_, err = io.Copy(dst, file)
+		if err != nil {
+			vd.SetAlert(err)
+			g.EditView.Render(w, r, vd)
+			return
+		}
+		fmt.Fprintln(w, "Files successfully uploaded")
+	}
+	// var form GalleryForm
+	// var vd views.Data
+	// vd.Yield = gallery
+	// if err := parseForm(r, &form); err != nil {
+	// 	log.Println(err)
+	// 	vd.SetAlert(err)
+	// 	g.EditView.Render(w, r, vd)
+	// 	return
+	// }
+	// gallery.Title = form.Title
+	// err = g.gs.Update(gallery)
+	// if err != nil {
+	// 	vd.SetAlert(err)
+	// 	g.EditView.Render(w, r, vd)
+	// 	return
+	// }
+	// vd.Alert = &views.Alert{
+	// 	Level:   views.AlertLvlSuccess,
+	// 	Message: "Gallery successfully updated!",
+	// }
+	// g.EditView.Render(w, r, vd)
 }
 
 // POST /galleries/:id/delete

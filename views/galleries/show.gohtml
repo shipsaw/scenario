@@ -5,9 +5,13 @@ Fake template (for now)...
         <h1>
             {{.Title}}
         </h1>
-        <p>
-            Images Coming Soon
-        </p>
+        <ul>
+          {{range .Images}}
+            <li>
+              {{.}}
+            </li>
+          {{end}}
+        </ul>
     </div>
     <div class="col-lg-4 themed-grid-col"></div>
   </div>

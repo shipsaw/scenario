@@ -32,7 +32,7 @@ func main() {
 	router := mux.NewRouter()
 	staticC := controllers.NewStatic()
 	usersC := controllers.NewUsers(services.User)
-	galleriesC := controllers.NewGalleries(services.Gallery, router)
+	galleriesC := controllers.NewGalleries(services.Gallery, services.Image, router)
 
 	router.Handle("/", staticC.HomeView).Methods("GET")
 	router.Handle("/contact", staticC.ContactView).Methods("GET")

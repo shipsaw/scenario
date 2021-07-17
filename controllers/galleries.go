@@ -2,10 +2,8 @@ package controllers
 
 import (
 	"fmt"
-	"io"
 	"log"
 	"net/http"
-	"os"
 	"strconv"
 
 	"github.com/gorilla/mux"
@@ -27,6 +25,7 @@ type Galleries struct {
 	EditView  *views.View
 	IndexView *views.View
 	gs        models.GalleryService
+	is        models.ImageService
 	router    *mux.Router
 }
 
@@ -65,12 +64,13 @@ func (g *Galleries) Create(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, url.Path, http.StatusFound)
 }
 
-func NewGalleries(gs models.GalleryService, router *mux.Router) *Galleries {
+func NewGalleries(gs models.GalleryService, is models.ImageService, router *mux.Router) *Galleries {
 	return &Galleries{
 		NewView:   views.NewView("bootstrap", "views/galleries/new.gohtml"),
 		ShowView:  views.NewView("bootstrap", "views/galleries/show.gohtml"),
 		EditView:  views.NewView("bootstrap", "views/galleries/edit.gohtml"),
 		IndexView: views.NewView("bootstrap", "views/galleries/index.gohtml"),
+		is:        is,
 		gs:        gs,
 		router:    router,
 	}
@@ -162,13 +162,6 @@ func (g *Galleries) ImageUpload(w http.ResponseWriter, r *http.Request) {
 
 	var vd views.Data
 	vd.Yield = gallery
-	galleryPath := fmt.Sprintf("images/galleries/%v/", gallery.ID)
-	err = os.MkdirAll(galleryPath, 0755)
-	if err != nil {
-		vd.SetAlert(err)
-		g.EditView.Render(w, r, vd)
-		return
-	}
 
 	err = r.ParseMultipartForm(maxMultipartMem)
 	if err != nil {
@@ -185,23 +178,14 @@ func (g *Galleries) ImageUpload(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		defer file.Close()
-
-		dst, err := os.Create(galleryPath + f.Filename)
+		err = g.is.Create(gallery.ID, file, f.Filename)
 		if err != nil {
 			vd.SetAlert(err)
 			g.EditView.Render(w, r, vd)
 			return
 		}
-		defer dst.Close()
-
-		_, err = io.Copy(dst, file)
-		if err != nil {
-			vd.SetAlert(err)
-			g.EditView.Render(w, r, vd)
-			return
-		}
-		fmt.Fprintln(w, "Files successfully uploaded")
 	}
+	fmt.Fprintln(w, "Files successfully uploaded")
 	// var form GalleryForm
 	// var vd views.Data
 	// vd.Yield = gallery
